@@ -32,9 +32,14 @@ namespace GaussianFilter
             }
         }
 
-        static unsafe void ProcessBitmapLine(byte* inputPtr, byte* outputPtr, int start, int length)
+        static unsafe void ProcessBitmapLine(byte[] inputPtr, byte[] outputPtr, int start, int length)
         {
-            ProcessBitmapPart(inputPtr + start, outputPtr + start, length);
+            fixed (byte* jeden = bitmapSource)   // Przymocowanie wskaźnika do bitmapSource
+            fixed (byte* drugi = bitmapOutput)
+            {
+                ProcessBitmapPart(jeden + start, drugi + start, length);
+            }
+               
         }
 
         static unsafe void Main(string[] args)
@@ -45,8 +50,7 @@ namespace GaussianFilter
 
             Thread[] threads = new Thread[3];
 
-            fixed (byte* inputPtr = bitmapSource)   // Przymocowanie wskaźnika do bitmapSource
-            fixed (byte* outputPtr = bitmapOutput)  // Przymocowanie wskaźnika do bitmapOutput
+            // Przymocowanie wskaźnika do bitmapOutput
             {
                 // Wątek 1: linia 1 (bajty 0-3)
                 // Wątek 2: linia 2 (bajty 4-7)
@@ -57,7 +61,7 @@ namespace GaussianFilter
                     int length = stride;    // Długość danych do przetworzenia dla każdego wątku
 
                     // Przekazujemy wskaźniki do nowej metody, unikając lambdy
-                    threads[i] = new Thread(() => ProcessBitmapLine(inputPtr, outputPtr, start, length));
+                    threads[i] = new Thread(() => ProcessBitmapLine(bitmapSource, bitmapOutput, start, length));
                     threads[i].Start();
                 }
 
