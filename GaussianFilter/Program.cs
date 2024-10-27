@@ -38,9 +38,9 @@ namespace GaussianFilter
             // Dane źródłowe (bitmapa 3x3 wyrównana do 4 bajtów na linię)
             byte[] bitmapSource = new byte[]
             {
-            1, 2, 3, 0,  // Pierwsza linia (3 piksele + 1 bajt wyrównania)
-            4, 5, 6, 0,  // Druga linia (3 piksele + 1 bajt wyrównania)
-            7, 8, 9, 0   // Trzecia linia (3 piksele + 1 bajt wyrównania)
+                1, 2, 3, 0,  // Pierwsza linia (3 piksele + 1 bajt wyrównania)
+                4, 5, 6, 0,  // Druga linia (3 piksele + 1 bajt wyrównania)
+                7, 8, 9, 0   // Trzecia linia (3 piksele + 1 bajt wyrównania)
             };
 
             // Dane wyjściowe
