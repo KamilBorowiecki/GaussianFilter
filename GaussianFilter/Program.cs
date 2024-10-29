@@ -7,19 +7,16 @@ namespace GaussianFilter
     internal class Program
     {
         [DllImport(@"C:\Users\Kamil\Desktop\Projekt_JA_filtrGaussa\GaussianFilter\x64\Debug\Asm.dll")]
-        public static extern void MyProc2(ref byte a, byte b);
+        public static extern unsafe void MyProc2(byte* a, byte b);
 
-
-        // Metoda przetwarzania dla wątków
         static unsafe void ProcessBitmap(byte* inputPtr, byte* outputPtr)
         {
-            // Przetwarzamy odpowiedni fragment danych za pomocą wskaźników
             for (int i = 0; i < 4; i++)
             {   
-                byte value = *(inputPtr + i); // Pobierz wartość źródłową przez wskaźnik
+                byte* value = inputPtr + i; 
                 if(i!=3)
-                    MyProc2(ref value, 11);      // Przekaż przez ref do MyProc2
-                *(outputPtr + i) = value; // Zapisz wynik przez wskaźnik
+                    MyProc2(value, 19);      
+                *(outputPtr + i) = *value; 
             }
         }
 
