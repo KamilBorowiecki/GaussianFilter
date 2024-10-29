@@ -22,7 +22,7 @@ namespace GaussianFilter
 
         static unsafe void PointerOnBitmapLine(byte[] bitmapSource, byte[] bitmapOutput, int start)
         {
-            fixed (byte* inputPtr = bitmapSource)   // Przymocowanie wskaźnika do bitmapSource
+            fixed (byte* inputPtr = bitmapSource)   
             fixed (byte* outputPtr = bitmapOutput)
             {
                 ProcessBitmap(inputPtr + start, outputPtr + start);
@@ -32,41 +32,36 @@ namespace GaussianFilter
 
         static unsafe void Main(string[] args)
         {
-            // Dane źródłowe (bitmapa 3x3 wyrównana do 4 bajtów na linię)
             byte[] bitmapSource = new byte[]
             {
-                1, 2, 3, 0,  // Pierwsza linia (3 piksele + 1 bajt wyrównania)
-                4, 5, 6, 0,  // Druga linia (3 piksele + 1 bajt wyrównania)
-                7, 8, 9, 0   // Trzecia linia (3 piksele + 1 bajt wyrównania)
+                1, 2, 3, 0,  
+                4, 5, 6, 0,  
+                7, 8, 9, 0   
             };
 
-            // Dane wyjściowe
-            byte[] bitmapOutput = new byte[12]; // Też wyrównane do 4 bajtów na linię (12 bajtów w sumie)
+            byte[] bitmapOutput = new byte[12]; 
 
             Thread[] threads = new Thread[3];
 
-            // Przymocowanie wskaźnika do bitmapOutput
             {
                 for (int i = 0; i < 3; i++)
                 {
-                    int start = i * 4; // Początek każdej linii
+                    int start = i * 4; 
 
                     threads[i] = new Thread(() => PointerOnBitmapLine(bitmapSource, bitmapOutput, start));
                     threads[i].Start();
                 }
 
-                // Czekamy na zakończenie wszystkich wątków
                 foreach (Thread t in threads)
                 {
                     t.Join();
                 }
             }
 
-            // Wyświetlenie wyniku przetwarzania
             for (int i = 0; i < bitmapOutput.Length; i++)
             {
                 Console.Write(bitmapOutput[i] + " ");
-                if ((i + 1) % 4 == 0) Console.WriteLine(); // Nowa linia co 4 bajty
+                if ((i + 1) % 4 == 0) Console.WriteLine(); 
             }
         }
     }
