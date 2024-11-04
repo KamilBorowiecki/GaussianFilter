@@ -55,18 +55,15 @@ namespace GaussianFilter
 
         static unsafe void Main(string[] args)
         {
-            string filePath = "C:\\Users\\Kamil\\Desktop\\Projekt_JA_filtrGaussa\\GaussianFilter\\bitmapa.txt"; // Ścieżka do pliku z liczbami
+            string filePath = "C:\\Users\\Kamil\\Desktop\\Projekt_JA_filtrGaussa\\GaussianFilter\\bitmapa.txt"; 
             for(int j =0; j < 2; j++)
             {
                 try
                 {
-                    // Wczytywanie całej zawartości pliku jako jednego ciągu znaków
                     string zawartoscPliku = File.ReadAllText(filePath);
 
-                    // Podzielenie zawartości na części po spacjach
                     string[] liczbyString = zawartoscPliku.Split(' ');
 
-                    // Inicjalizacja tablicy o rozmiarze równym liczbie elementów w pliku
                     int iloscliczb = liczbyString.Length;
                     Console.WriteLine($"liczba: {iloscliczb}");
                     double pierwiastek = Math.Sqrt(iloscliczb);
@@ -77,7 +74,6 @@ namespace GaussianFilter
                     int index2 = 1;
                     Console.WriteLine($"pierwiastek: {pierwiastek}");
 
-                    // Konwersja każdego elementu tekstowego na liczbę
                     foreach (var liczbaString in liczbyString)
                     {
                         if (byte.TryParse(liczbaString, out byte liczba))
@@ -114,7 +110,6 @@ namespace GaussianFilter
 
                     Stopwatch stopwatch = new Stopwatch();
 
-                    // Rozpocznij pomiar czasu
                     stopwatch.Start();
 
                     for (int i = 0; i < threadsCount; i++)
