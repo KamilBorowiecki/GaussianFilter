@@ -98,60 +98,64 @@ namespace GaussianFilter
             if (value > max) return max;
             return value;
         }
-        private static unsafe void ApplyGaussianFilter(byte* ptr, int width, int height)
+
+        private static unsafe void GaussianBlur(byte* ptr, int width, int height, int bytesPerPixel, int stride)
         {
-            // Define a 3x3 Gaussian kernel
+            // Jądro filtra Gaussa 9x9
             double[,] kernel = {
-        { 1 / 16.0, 1 / 8.0, 1 / 16.0 },
-        { 1 / 8.0, 1 / 4.0, 1 / 8.0 },
-        { 1 / 16.0, 1 / 8.0, 1 / 16.0 }
+        { 1 / 273.0,  1 / 273.0,  2 / 273.0,  2 / 273.0,  2 / 273.0,  2 / 273.0,  1 / 273.0,  1 / 273.0, 1 / 273.0 },
+        { 1 / 273.0,  2 / 273.0,  2 / 273.0,  4 / 273.0,  4 / 273.0,  2 / 273.0,  2 / 273.0,  1 / 273.0, 1 / 273.0 },
+        { 2 / 273.0,  2 / 273.0,  4 / 273.0,  8 / 273.0,  8 / 273.0,  4 / 273.0,  2 / 273.0,  2 / 273.0, 2 / 273.0 },
+        { 2 / 273.0,  4 / 273.0,  8 / 273.0, 16 / 273.0, 16 / 273.0,  8 / 273.0,  4 / 273.0,  2 / 273.0, 2 / 273.0 },
+        { 2 / 273.0,  4 / 273.0,  8 / 273.0, 16 / 273.0, 16 / 273.0,  8 / 273.0,  4 / 273.0,  2 / 273.0, 2 / 273.0 },
+        { 2 / 273.0,  4 / 273.0,  8 / 273.0, 16 / 273.0, 16 / 273.0,  8 / 273.0,  4 / 273.0,  2 / 273.0, 2 / 273.0 },
+        { 1 / 273.0,  2 / 273.0,  2 / 273.0,  4 / 273.0,  4 / 273.0,  2 / 273.0,  2 / 273.0,  1 / 273.0, 1 / 273.0 },
+        { 1 / 273.0,  1 / 273.0,  2 / 273.0,  2 / 273.0,  2 / 273.0,  2 / 273.0,  1 / 273.0,  1 / 273.0, 1 / 273.0 },
+        { 1 / 273.0,  1 / 273.0,  2 / 273.0,  2 / 273.0,  2 / 273.0,  2 / 273.0,  1 / 273.0,  1 / 273.0, 1 / 273.0 }
     };
 
-            int kernelSize = 3;
-            int kernelOffset = kernelSize / 2;
+            byte[] result = new byte[height * stride];
 
-            // Create a temporary array to store the filtered pixel values
-            byte[] result = new byte[width * height * 4];
-
-            for (int y = kernelOffset; y < height - kernelOffset; y++)
+            for (int y = 4; y < height - 4; y++) // Omijamy krawędzie
             {
-                for (int x = kernelOffset; x < width - kernelOffset; x++)
+                for (int x = 4; x < width - 4; x++)
                 {
-                    double rSum = 0, gSum = 0, bSum = 0;
+                    double blueSum = 0, greenSum = 0, redSum = 0;
 
-                    // Convolution operation
-                    for (int ky = -kernelOffset; ky <= kernelOffset; ky++)
+                    // Przechodzimy przez jądro 9x9
+                    for (int ky = -4; ky <= 4; ky++)
                     {
-                        for (int kx = -kernelOffset; kx <= kernelOffset; kx++)
+                        for (int kx = -4; kx <= 4; kx++)
                         {
-                            int pixelIndex = ((y + ky) * width + (x + kx)) * 4;
+                            int neighborX = x + kx;
+                            int neighborY = y + ky;
+                            byte* neighborPixel = ptr + (neighborY * stride) + (neighborX * bytesPerPixel);
 
-                            // Access each color channel
-                            byte b = ptr[pixelIndex];
-                            byte g = ptr[pixelIndex + 1];
-                            byte r = ptr[pixelIndex + 2];
+                            int neighborBlue = neighborPixel[0];
+                            int neighborGreen = neighborPixel[1];
+                            int neighborRed = neighborPixel[2];
 
-                            double kernelValue = kernel[ky + kernelOffset, kx + kernelOffset];
-                            rSum += r * kernelValue;
-                            gSum += g * kernelValue;
-                            bSum += b * kernelValue;
+                            double kernelValue = kernel[ky + 4, kx + 4];
+                            blueSum += neighborBlue * kernelValue;
+                            greenSum += neighborGreen * kernelValue;
+                            redSum += neighborRed * kernelValue;
                         }
                     }
 
-                    // Set the new pixel value in the result array
-                    int resultIndex = (y * width + x) * 4;
-                    result[resultIndex] = (byte)Clamp((int)bSum, 0, 255);       // Blue channel
-                    result[resultIndex + 1] = (byte)Clamp((int)gSum, 0, 255);   // Green channel
-                    result[resultIndex + 2] = (byte)Clamp((int)rSum, 0, 255);   // Red channel
+                    int index = (y * stride) + (x * bytesPerPixel);
+                    result[index] = (byte)Clamp((int)blueSum, 0, 255);
+                    result[index + 1] = (byte)Clamp((int)greenSum, 0, 255);
+                    result[index + 2] = (byte)Clamp((int)redSum, 0, 255);
                 }
             }
 
-            // Copy the result back to the original image data
-            for (int i = 0; i < width * height * 4; i++)
+            // Przenosimy wynik z powrotem do oryginalnych danych obrazu
+            for (int i = 0; i < height * stride; i++)
             {
                 ptr[i] = result[i];
             }
         }
+
 
         private static unsafe Bitmap ProcessBitmap(Bitmap bmp)
         {
@@ -160,25 +164,14 @@ namespace GaussianFilter
                                                ImageLockMode.ReadWrite, bmap.PixelFormat);
 
             int bytesPerPixel = System.Drawing.Bitmap.GetPixelFormatSize(bmap.PixelFormat) / 8;
-            int heightInPixels = bmpData.Height;
-            int widthInBytes = bmpData.Width * bytesPerPixel;
+            int stride = bmpData.Stride;
 
             byte* ptr = (byte*)bmpData.Scan0;
 
-            Parallel.For(0, heightInPixels, y =>
+            for (int i = 0; i < 5; i++)
             {
-                byte* currentLine = ptr + (y * bmpData.Stride); 
-                for (int i = 0; i < widthInBytes; i += bytesPerPixel)
-                {
-                    int oldBlue = currentLine[i];
-                    int oldGreen = currentLine[i + 1];
-                    int oldRed = currentLine[i + 2];
-
-                    currentLine[i] = 0;             
-                    currentLine[i + 1] = (byte)oldGreen; 
-                    currentLine[i + 2] = (byte)oldRed;   
-                }
-            });
+                GaussianBlur(ptr, bmp.Width, bmp.Height, bytesPerPixel, stride);
+            }
 
             bmap.UnlockBits(bmpData);
             return bmap;
