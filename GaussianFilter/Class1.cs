@@ -99,36 +99,39 @@ namespace GaussianFilter
             return value;
         }
 
-        private static unsafe void GaussianBlur(byte* ptr, int width, int height, int bytesPerPixel, int stride)
+        private static unsafe void GaussianBlurRow(byte* ptr, int width, int height, int bytesPerPixel, int stride, int row)
         {
             // Jądro filtra Gaussa 9x9
             double[,] kernel = {
-        { 1 / 273.0,  1 / 273.0,  2 / 273.0,  2 / 273.0,  2 / 273.0,  2 / 273.0,  1 / 273.0,  1 / 273.0, 1 / 273.0 },
-        { 1 / 273.0,  2 / 273.0,  2 / 273.0,  4 / 273.0,  4 / 273.0,  2 / 273.0,  2 / 273.0,  1 / 273.0, 1 / 273.0 },
-        { 2 / 273.0,  2 / 273.0,  4 / 273.0,  8 / 273.0,  8 / 273.0,  4 / 273.0,  2 / 273.0,  2 / 273.0, 2 / 273.0 },
-        { 2 / 273.0,  4 / 273.0,  8 / 273.0, 16 / 273.0, 16 / 273.0,  8 / 273.0,  4 / 273.0,  2 / 273.0, 2 / 273.0 },
-        { 2 / 273.0,  4 / 273.0,  8 / 273.0, 16 / 273.0, 16 / 273.0,  8 / 273.0,  4 / 273.0,  2 / 273.0, 2 / 273.0 },
-        { 2 / 273.0,  4 / 273.0,  8 / 273.0, 16 / 273.0, 16 / 273.0,  8 / 273.0,  4 / 273.0,  2 / 273.0, 2 / 273.0 },
-        { 1 / 273.0,  2 / 273.0,  2 / 273.0,  4 / 273.0,  4 / 273.0,  2 / 273.0,  2 / 273.0,  1 / 273.0, 1 / 273.0 },
-        { 1 / 273.0,  1 / 273.0,  2 / 273.0,  2 / 273.0,  2 / 273.0,  2 / 273.0,  1 / 273.0,  1 / 273.0, 1 / 273.0 },
-        { 1 / 273.0,  1 / 273.0,  2 / 273.0,  2 / 273.0,  2 / 273.0,  2 / 273.0,  1 / 273.0,  1 / 273.0, 1 / 273.0 }
-    };
+            { 1 / 273.0,  1 / 273.0,  2 / 273.0,  2 / 273.0,  2 / 273.0,  2 / 273.0,  1 / 273.0,  1 / 273.0, 1 / 273.0 },
+            { 1 / 273.0,  2 / 273.0,  2 / 273.0,  4 / 273.0,  4 / 273.0,  2 / 273.0,  2 / 273.0,  1 / 273.0, 1 / 273.0 },
+            { 2 / 273.0,  2 / 273.0,  4 / 273.0,  8 / 273.0,  8 / 273.0,  4 / 273.0,  2 / 273.0,  2 / 273.0, 2 / 273.0 },
+            { 2 / 273.0,  4 / 273.0,  8 / 273.0, 16 / 273.0, 16 / 273.0,  8 / 273.0,  4 / 273.0,  2 / 273.0, 2 / 273.0 },
+            { 2 / 273.0,  4 / 273.0,  8 / 273.0, 16 / 273.0, 16 / 273.0,  8 / 273.0,  4 / 273.0,  2 / 273.0, 2 / 273.0 },
+            { 2 / 273.0,  4 / 273.0,  8 / 273.0, 16 / 273.0, 16 / 273.0,  8 / 273.0,  4 / 273.0,  2 / 273.0, 2 / 273.0 },
+            { 1 / 273.0,  2 / 273.0,  2 / 273.0,  4 / 273.0,  4 / 273.0,  2 / 273.0,  2 / 273.0,  1 / 273.0, 1 / 273.0 },
+            { 1 / 273.0,  1 / 273.0,  2 / 273.0,  2 / 273.0,  2 / 273.0,  2 / 273.0,  1 / 273.0,  1 / 273.0, 1 / 273.0 },
+            { 1 / 273.0,  1 / 273.0,  2 / 273.0,  2 / 273.0,  2 / 273.0,  2 / 273.0,  1 / 273.0,  1 / 273.0, 1 / 273.0 }};
 
-            byte[] result = new byte[height * stride];
+            // Bufor na przetworzone dane dla danego wiersza
+            byte[] result = new byte[width * bytesPerPixel];
 
-            for (int y = 4; y < height - 4; y++) // Omijamy krawędzie
+            // Przetwarzanie pikseli w wybranym wierszu (z pominięciem brzegów)
+            for (int x = 4; x < width - 4; x++)
             {
-                for (int x = 4; x < width - 4; x++)
-                {
-                    double blueSum = 0, greenSum = 0, redSum = 0;
+                double blueSum = 0, greenSum = 0, redSum = 0;
 
-                    // Przechodzimy przez jądro 9x9
-                    for (int ky = -4; ky <= 4; ky++)
+                // Przechodzimy przez jądro 9x9
+                for (int ky = -4; ky <= 4; ky++)
+                {
+                    for (int kx = -4; kx <= 4; kx++)
                     {
-                        for (int kx = -4; kx <= 4; kx++)
+                        int neighborX = x + kx;
+                        int neighborY = row + ky;
+
+                        // Sprawdzamy, czy sąsiad mieści się w granicach obrazu
+                        if (neighborY >= 0 && neighborY < height)
                         {
-                            int neighborX = x + kx;
-                            int neighborY = y + ky;
                             byte* neighborPixel = ptr + (neighborY * stride) + (neighborX * bytesPerPixel);
 
                             int neighborBlue = neighborPixel[0];
@@ -141,21 +144,22 @@ namespace GaussianFilter
                             redSum += neighborRed * kernelValue;
                         }
                     }
-
-                    int index = (y * stride) + (x * bytesPerPixel);
-                    result[index] = (byte)Clamp((int)blueSum, 0, 255);
-                    result[index + 1] = (byte)Clamp((int)greenSum, 0, 255);
-                    result[index + 2] = (byte)Clamp((int)redSum, 0, 255);
                 }
+
+                // Zapisanie wyników dla bieżącego piksela
+                int resultIndex = x * bytesPerPixel;
+                result[resultIndex] = (byte)Clamp((int)blueSum, 0, 255);
+                result[resultIndex + 1] = (byte)Clamp((int)greenSum, 0, 255);
+                result[resultIndex + 2] = (byte)Clamp((int)redSum, 0, 255);
             }
 
-            // Przenosimy wynik z powrotem do oryginalnych danych obrazu
-            for (int i = 0; i < height * stride; i++)
+            // Przeniesienie wyników z powrotem do pamięci oryginalnej bitmapy
+            byte* rowPtr = ptr + (row * stride);
+            for (int i = 0; i < width * bytesPerPixel; i++)
             {
-                ptr[i] = result[i];
+                rowPtr[i] = result[i];
             }
         }
-
 
         private static unsafe Bitmap ProcessBitmap(Bitmap bmp)
         {
@@ -165,12 +169,28 @@ namespace GaussianFilter
 
             int bytesPerPixel = System.Drawing.Bitmap.GetPixelFormatSize(bmap.PixelFormat) / 8;
             int stride = bmpData.Stride;
-
             byte* ptr = (byte*)bmpData.Scan0;
 
-            for (int i = 0; i < 5; i++)
+            // Przechowujemy szerokość i wysokość w zmiennych lokalnych
+            int width = bmp.Width;
+            int height = bmp.Height;
+
+            // Tworzymy tablicę wątków
+            Thread[] threads = new Thread[height];
+
+            for (int i = 0; i < height; i++)
             {
-                GaussianBlur(ptr, bmp.Width, bmp.Height, bytesPerPixel, stride);
+                int currentRow = i; // Kopiujemy indeks, aby uniknąć zamknięć
+                threads[currentRow] = new Thread(() =>
+                {
+                    GaussianBlurRow(ptr, width, height, bytesPerPixel, stride, currentRow);
+                });
+                threads[currentRow].Start();
+            }
+
+            foreach (Thread t in threads)
+            {
+                t.Join(); // Oczekiwanie na zakończenie wątków
             }
 
             bmap.UnlockBits(bmpData);
