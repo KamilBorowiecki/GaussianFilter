@@ -152,8 +152,10 @@ namespace GaussianFilter
             int height = bmp.Height;
 
             // Tworzymy tablicę wątków
-            Thread[] threads = new Thread[height];
 
+            Stopwatch sw = new Stopwatch();
+            Thread[] threads = new Thread[height];
+            sw.Start();
             for (int i = 0; i < height; i++)
             {
                 int currentRow = i; // Kopiujemy indeks, aby uniknąć zamknięć
@@ -169,8 +171,9 @@ namespace GaussianFilter
             {
                 t.Join(); // Oczekiwanie na zakończenie wątków
             }
-
+            sw.Stop();
             bmap.UnlockBits(bmpData);
+            MessageBox.Show($"Czas wykonania: {sw.ElapsedMilliseconds} ms");
             return bmap;
         }
 
