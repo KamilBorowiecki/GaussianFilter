@@ -16,22 +16,28 @@ namespace GaussianFilter
         private PictureBox pictureBox1;
         private PictureBox pictureBox2;
         private Button button1;
-        private byte[] bitmapBytes;
+        private static TextBox textBox1;
+        private static double[,] kernel1;
+        private static int k;
 
         [DllImport(@"C:\Users\Kamil\Desktop\Projekt_JA_filtrGaussa\GaussianFilter\x64\Debug\Asm.dll", EntryPoint = "MyProc2", CallingConvention = CallingConvention.StdCall)]
         public static extern unsafe void MyProc2(byte* ptr, byte valueToAdd);
 
         [DllImport(@"C:\Users\Kamil\Desktop\Projekt_JA_filtrGaussa\GaussianFilter\x64\Debug\Cdll.dll", EntryPoint = "calculateFilterCPP", CallingConvention = CallingConvention.StdCall)]
-        public static extern unsafe void calculateFilterCPP(byte* ptr, int width, int height);
+        public static extern unsafe void calculateFilterCPP(byte* ptr, int row, int width, int height, int k, double[,] filter);
 
         public MainForm()
         {
             // Initialize components
+            textBox1 = new TextBox()
+            {
+                Dock = DockStyle.Bottom
+            };
             pictureBox1 = new PictureBox
             {
-                Width = 600,               // Ustaw szerokość na 200 pikseli
-                Height = 600,              // Ustaw wysokość na 200 pikseli
-                SizeMode = PictureBoxSizeMode.Zoom, // Skaluje obraz proporcjonalnie do rozmiaru ramki
+                Width = 600,
+                Height = 600,
+                SizeMode = PictureBoxSizeMode.Zoom,
                 Location = new Point(10, 40)
             };
 
@@ -50,6 +56,7 @@ namespace GaussianFilter
             };
             button1.Click += button1_Click;
 
+            Controls.Add(textBox1);
             Controls.Add(pictureBox2);
             Controls.Add(pictureBox1);
             Controls.Add(button1);
@@ -92,83 +99,52 @@ namespace GaussianFilter
             }
             return bitmap;
         }
-        private static int Clamp(int value, int min, int max)
+        public static double[,] GenerateGaussianKernel(double sigma)
         {
-            if (value < min) return min;
-            if (value > max) return max;
-            return value;
-        }
-
-        private static unsafe void GaussianBlurRow(byte* ptr, int width, int height, int bytesPerPixel, int stride, int row)
-        {
-            // Jądro filtra Gaussa 9x9
-            double[,] kernel = {
-            { 1 / 273.0,  1 / 273.0,  2 / 273.0,  2 / 273.0,  2 / 273.0,  2 / 273.0,  1 / 273.0,  1 / 273.0, 1 / 273.0 },
-            { 1 / 273.0,  2 / 273.0,  2 / 273.0,  4 / 273.0,  4 / 273.0,  2 / 273.0,  2 / 273.0,  1 / 273.0, 1 / 273.0 },
-            { 2 / 273.0,  2 / 273.0,  4 / 273.0,  8 / 273.0,  8 / 273.0,  4 / 273.0,  2 / 273.0,  2 / 273.0, 2 / 273.0 },
-            { 2 / 273.0,  4 / 273.0,  8 / 273.0, 16 / 273.0, 16 / 273.0,  8 / 273.0,  4 / 273.0,  2 / 273.0, 2 / 273.0 },
-            { 2 / 273.0,  4 / 273.0,  8 / 273.0, 16 / 273.0, 16 / 273.0,  8 / 273.0,  4 / 273.0,  2 / 273.0, 2 / 273.0 },
-            { 2 / 273.0,  4 / 273.0,  8 / 273.0, 16 / 273.0, 16 / 273.0,  8 / 273.0,  4 / 273.0,  2 / 273.0, 2 / 273.0 },
-            { 1 / 273.0,  2 / 273.0,  2 / 273.0,  4 / 273.0,  4 / 273.0,  2 / 273.0,  2 / 273.0,  1 / 273.0, 1 / 273.0 },
-            { 1 / 273.0,  1 / 273.0,  2 / 273.0,  2 / 273.0,  2 / 273.0,  2 / 273.0,  1 / 273.0,  1 / 273.0, 1 / 273.0 },
-            { 1 / 273.0,  1 / 273.0,  2 / 273.0,  2 / 273.0,  2 / 273.0,  2 / 273.0,  1 / 273.0,  1 / 273.0, 1 / 273.0 }};
-
-            // Bufor na przetworzone dane dla danego wiersza
-            byte[] result = new byte[width * bytesPerPixel];
-
-            // Przetwarzanie pikseli w wybranym wierszu (z pominięciem brzegów)
-            for (int x = 4; x < width - 4; x++)
+            if (int.TryParse(textBox1.Text, out int size))
             {
-                double blueSum = 0, greenSum = 0, redSum = 0;
+                MessageBox.Show($"Wpisana liczba: {size}", "Informacja");
+                k = (size - 1) / 2;
+            }
+            else
+            {
+                MessageBox.Show("Wpisano nieprawidłową liczbę!", "Błąd");
+            }
 
-                // Przechodzimy przez jądro 9x9
-                for (int ky = -4; ky <= 4; ky++)
+            double[,] kernel = new double[size, size];
+            int center = size / 2;
+            double sum = 0.0;
+
+            // Oblicz wartości dla maski
+            for (int i = 0; i < size; i++)
+            {
+                for (int j = 0; j < size; j++)
                 {
-                    for (int kx = -4; kx <= 4; kx++)
-                    {
-                        int neighborX = x + kx;
-                        int neighborY = row + ky;
-
-                        // Sprawdzamy, czy sąsiad mieści się w granicach obrazu
-                        if (neighborY >= 0 && neighborY < height)
-                        {
-                            byte* neighborPixel = ptr + (neighborY * stride) + (neighborX * bytesPerPixel);
-
-                            int neighborBlue = neighborPixel[0];
-                            int neighborGreen = neighborPixel[1];
-                            int neighborRed = neighborPixel[2];
-
-                            double kernelValue = kernel[ky + 4, kx + 4];
-                            blueSum += neighborBlue * kernelValue;
-                            greenSum += neighborGreen * kernelValue;
-                            redSum += neighborRed * kernelValue;
-                        }
-                    }
+                    int x = i - center;
+                    int y = j - center;
+                    kernel[i, j] = Math.Exp(-(x * x + y * y) / (2 * sigma * sigma));
+                    sum += kernel[i, j];
                 }
-
-                // Zapisanie wyników dla bieżącego piksela
-                int resultIndex = x * bytesPerPixel;
-                result[resultIndex] = (byte)Clamp((int)blueSum, 0, 255);
-                result[resultIndex + 1] = (byte)Clamp((int)greenSum, 0, 255);
-                result[resultIndex + 2] = (byte)Clamp((int)redSum, 0, 255);
             }
 
-            // Przeniesienie wyników z powrotem do pamięci oryginalnej bitmapy
-            byte* rowPtr = ptr + (row * stride);
-            for (int i = 0; i < width * bytesPerPixel; i++)
+            // Normalizacja
+            for (int i = 0; i < size; i++)
             {
-                rowPtr[i] = result[i];
+                for (int j = 0; j < size; j++)
+                {
+                    kernel[i, j] /= sum;
+                }
             }
+
+            return kernel;
         }
 
         private static unsafe Bitmap ProcessBitmap(Bitmap bmp)
         {
-            Bitmap bmap = (Bitmap)bmp.Clone(); // Clone the bitmap to avoid modifying the original
+            Bitmap bmap = (Bitmap)bmp.Clone();
             BitmapData bmpData = bmap.LockBits(new Rectangle(0, 0, bmp.Width, bmp.Height),
                                                ImageLockMode.ReadWrite, bmap.PixelFormat);
 
-            int bytesPerPixel = System.Drawing.Bitmap.GetPixelFormatSize(bmap.PixelFormat) / 8;
-            int stride = bmpData.Stride;
             byte* ptr = (byte*)bmpData.Scan0;
 
             // Przechowujemy szerokość i wysokość w zmiennych lokalnych
@@ -183,7 +159,8 @@ namespace GaussianFilter
                 int currentRow = i; // Kopiujemy indeks, aby uniknąć zamknięć
                 threads[currentRow] = new Thread(() =>
                 {
-                    GaussianBlurRow(ptr, width, height, bytesPerPixel, stride, currentRow);
+                    calculateFilterCPP(ptr, currentRow, width, height, k, kernel1);
+
                 });
                 threads[currentRow].Start();
             }
@@ -206,6 +183,19 @@ namespace GaussianFilter
             Application.Run(new MainForm());
         }
 
+        private bool rightImageFormat(Bitmap bitmap)
+        {
+            if (bitmap.PixelFormat != PixelFormat.Format24bppRgb)
+            {
+                MessageBox.Show("Obsługiwane są tylko obrazy 24-bitowe RGB.");
+                return false;
+            }
+            else
+            {
+                MessageBox.Show("Poprawny obraz");
+                return true;
+            }
+        }
         private void button1_Click(object sender, EventArgs e)
         {
             using (OpenFileDialog openFileDialog = new OpenFileDialog())
@@ -215,11 +205,13 @@ namespace GaussianFilter
                 {
                     // Wczytywanie obrazu do PictureBox
                     bitmap = new Bitmap(openFileDialog.FileName);
-                    bitmap.RotateFlip(RotateFlipType.Rotate90FlipNone);
-
-                    pictureBox1.Image = bitmap;
-                    bitmap = ProcessBitmap(bitmap);
-                    pictureBox2.Image = bitmap;
+                    if (rightImageFormat(bitmap))
+                    {
+                        kernel1 = GenerateGaussianKernel(100);
+                        pictureBox1.Image = bitmap;
+                        bitmap = ProcessBitmap(bitmap);
+                        pictureBox2.Image = bitmap;
+                    }
                 }
             }
         }
