@@ -21,7 +21,7 @@ namespace GaussianFilter
         private static int k;
 
         [DllImport(@"C:\Users\Kamil\Desktop\Projekt_JA_filtrGaussa\GaussianFilter\x64\Debug\Asm.dll", EntryPoint = "MyProc2", CallingConvention = CallingConvention.StdCall)]
-        public static extern unsafe void MyProc2(byte* ptr, byte valueToAdd);
+        public static extern unsafe void MyProc2(byte* ptr, int row, int width, int height, int k, double[,] filter);
 
         [DllImport(@"C:\Users\Kamil\Desktop\Projekt_JA_filtrGaussa\GaussianFilter\x64\Debug\Cdll.dll", EntryPoint = "calculateFilterCPP", CallingConvention = CallingConvention.StdCall)]
         public static extern unsafe void calculateFilterCPP(byte* ptr, int row, int width, int height, int k, double[,] filter);
