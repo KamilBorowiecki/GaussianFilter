@@ -17,7 +17,7 @@ namespace GaussianFilter
         private PictureBox pictureBox2;
         private Button button1;
         private static TextBox textBox1;
-        private static double[,] kernel1;
+        private static double[,] filter;
         private static int k;
 
         [DllImport(@"C:\Users\Kamil\Desktop\Projekt_JA_filtrGaussa\GaussianFilter\x64\Debug\Asm.dll", EntryPoint = "MyProc2", CallingConvention = CallingConvention.StdCall)]
@@ -60,44 +60,6 @@ namespace GaussianFilter
             Controls.Add(pictureBox2);
             Controls.Add(pictureBox1);
             Controls.Add(button1);
-        }
-
-
-        private static byte[] BitmapToByteArray(Bitmap bitmap)
-        {
-            int bytesCount = bitmap.Width * bitmap.Height * 3;
-            byte[] byteArray = new byte[bytesCount];
-            int index = 0;
-
-            for (int y = 0; y < bitmap.Height; y++)
-            {
-                for (int x = 0; x < bitmap.Width; x++)
-                {
-                    Color pixel = bitmap.GetPixel(x, y);
-                    byteArray[index++] = pixel.R;
-                    byteArray[index++] = pixel.G;
-                    byteArray[index++] = pixel.B;
-                }
-            }
-            return byteArray;
-        }
-
-        private static Bitmap ByteArrayToBitmap(byte[] byteArray, int width, int height)
-        {
-            Bitmap bitmap = new Bitmap(width, height);
-            int index = 0;
-
-            for (int y = 0; y < height; y++)
-            {
-                for (int x = 0; x < width; x++)
-                {
-                    byte r = byteArray[index++];
-                    byte g = byteArray[index++];
-                    byte b = byteArray[index++];
-                    bitmap.SetPixel(x, y, Color.FromArgb(r, g, b));
-                }
-            }
-            return bitmap;
         }
         public static double[,] GenerateGaussianKernel(double sigma)
         {
@@ -161,7 +123,7 @@ namespace GaussianFilter
                 int currentRow = i; // Kopiujemy indeks, aby uniknąć zamknięć
                 threads[currentRow] = new Thread(() =>
                 {
-                    calculateFilterCPP(ptr, currentRow, width, height, k, kernel1);
+                    calculateFilterCPP(ptr, currentRow, width, height, k, filter);
 
                 });
                 threads[currentRow].Start();
@@ -210,7 +172,7 @@ namespace GaussianFilter
                     bitmap = new Bitmap(openFileDialog.FileName);
                     if (rightImageFormat(bitmap))
                     {
-                        kernel1 = GenerateGaussianKernel(100);
+                        filter = GenerateGaussianKernel(100);
                         pictureBox1.Image = bitmap;
                         bitmap = ProcessBitmap(bitmap);
                         pictureBox2.Image = bitmap;
