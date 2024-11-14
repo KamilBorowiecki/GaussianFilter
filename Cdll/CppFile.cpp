@@ -8,24 +8,30 @@
 extern "C" {
 	MyFunctions void calculateFilterCPP(BYTE outData[], BYTE data[], int imWidth, int index, int filter[], int k)
 	{
-		//Inicjalizacja wyniku
+		// Inicjalizacja wyniku
 		double result = 0;
 		int filterSize = 2 * k + 1;
-		//Przejdü kolejno przez kaødπ
+
+		// Przejdü przez kaødy element filtra
 		for (int i = -k; i <= k; i++)
 		{
 			for (int j = -k; j <= k; j++)
 			{
-				result += data[index + ((i * imWidth + j) * 3)] * filter[(i + k) * filterSize + j + k];
+				int filterValue = filter[(i + k) * filterSize + j + k];
+				result += data[index + ((i * imWidth + j) * 3)] * (filterValue);
+	
 			}
 		}
 
+		
+		
+		// Ograniczenie wyniku do zakresu 0-255
 		if (result <= 0)
 			result = 0;
 		if (result > 255)
 			result = 255;
-		result = result / 16;
 
 		outData[index] = (BYTE)result;
 	}
+
 }
