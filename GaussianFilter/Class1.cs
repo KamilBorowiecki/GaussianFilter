@@ -7,6 +7,7 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using static System.Net.WebRequestMethods;
 
 namespace GaussianFilter
 {
@@ -17,14 +18,14 @@ namespace GaussianFilter
         private PictureBox pictureBox2;
         private Button button1;
         private static TextBox textBox1;
-        private static double[,] filter;
+        private static double[] filter;
         private static int k;
 
-        [DllImport(@"C:\Users\Kamil\Desktop\Projekt_JA_filtrGaussa\GaussianFilter\x64\Debug\Asm.dll", EntryPoint = "MyProc2", CallingConvention = CallingConvention.StdCall)]
-        public static extern unsafe void MyProc2(byte* ptr, int row, int width, int height, int k, double[,] filter);
+        [DllImport(@"C:\Users\Kamil\Desktop\Projekt_JA_filtrGaussa\GaussianFilter\x64\Debug\Asm.dll", EntryPoint = "MyProc2", CallingConvention = CallingConvention.Cdecl)]
+        public static extern unsafe void MyProc2(byte[] outData, byte[] data, int imWidth, int i, Int16[] filter);
 
         [DllImport(@"C:\Users\Kamil\Desktop\Projekt_JA_filtrGaussa\GaussianFilter\x64\Debug\Cdll.dll", EntryPoint = "calculateFilterCPP", CallingConvention = CallingConvention.StdCall)]
-        public static extern unsafe void calculateFilterCPP(byte* ptr, int row, int width, int height, int k, double[,] filter);
+        public static extern void calculateFilterCPP(byte[] outData, byte[] data, int imWidth, int i, Int16[] filter, int k);
 
         public MainForm()
         {
@@ -61,19 +62,11 @@ namespace GaussianFilter
             Controls.Add(pictureBox1);
             Controls.Add(button1);
         }
-        public static double[,] GenerateGaussianKernel(double sigma)
+        public static double[] GenerateGaussianKernel(double sigma)
         {
-            if (int.TryParse(textBox1.Text, out int size))
-            {
-                MessageBox.Show($"Wpisana liczba: {size}", "Informacja");
-                k = (size - 1) / 2;
-            }
-            else
-            {
-                MessageBox.Show("Wpisano nieprawidłową liczbę!", "Błąd");
-            }
-
-            double[,] kernel = new double[size, size];
+            int size = int.Parse(textBox1.Text);
+            k = (size - 1) / 2; // Rozmiar półmaski
+            double[] gaussianFilter = new double[size * size];
             int center = size / 2;
             double sum = 0.0;
 
@@ -84,22 +77,21 @@ namespace GaussianFilter
                 {
                     int x = i - center;
                     int y = j - center;
-                    kernel[i, j] = Math.Exp(-(x * x + y * y) / (2 * sigma * sigma));
-                    sum += kernel[i, j];
+                    int index = i * size + j; // Konwersja indeksów 2D na 1D
+                    gaussianFilter[index] = Math.Exp(-(x * x + y * y) / (2 * sigma * sigma));
+                    sum += gaussianFilter[index];
                 }
             }
 
             // Normalizacja
-            for (int i = 0; i < size; i++)
+            for (int i = 0; i < gaussianFilter.Length; i++)
             {
-                for (int j = 0; j < size; j++)
-                {
-                    kernel[i, j] /= sum;
-                }
+                gaussianFilter[i] /= sum;
             }
 
-            return kernel;
+            return gaussianFilter;
         }
+
 
         private static unsafe Bitmap ProcessBitmap(Bitmap bmp)
         {
@@ -107,34 +99,49 @@ namespace GaussianFilter
             BitmapData bmpData = bmap.LockBits(new Rectangle(0, 0, bmp.Width, bmp.Height),
                                                ImageLockMode.ReadWrite, bmap.PixelFormat);
 
-            byte* ptr = (byte*)bmpData.Scan0;
+            IntPtr ptr = bmpData.Scan0;
 
             // Przechowujemy szerokość i wysokość w zmiennych lokalnych
             int width = bmp.Width;
             int height = bmp.Height;
 
-            // Tworzymy tablicę wątków
+            int bytesPerPixel = 3; // 24-bitowy BMP
+            int stride = bmpData.Stride; // Uwzględniamy rzeczywisty stride bitmapy
+            uint imageSize = (uint)(stride * height);
 
+            byte[] data = new byte[imageSize];
+            byte[] outData = new byte[imageSize];
+
+            // Kopiujemy dane z bitmapy do tablicy bajtów
+            Marshal.Copy(ptr, data, 0, data.Length);
+
+            // Przetwarzanie obrazu przy użyciu filtra w C++
+            Int16[] filter1 = {1,2,1,2,4,2,1,2,1};
+            double[] filter2 = { 1.0 / 16, 2.0 / 16, 1.0 / 16, 2.0 / 16, 4.0 / 16, 2.0 / 16, 1.0 / 16, 2.0 / 16, 1.0 / 16 };
+            //filter;
+            int k1 = k;
             Stopwatch sw = new Stopwatch();
-            Thread[] threads = new Thread[height];
             sw.Start();
-            for (int i = 0; i < height; i++)
+            for (int i = width * 3 + 1; i < (imageSize - width * 3); i++)
             {
-                int currentRow = i; // Kopiujemy indeks, aby uniknąć zamknięć
-                threads[currentRow] = new Thread(() =>
+                calculateFilterCPP(outData, data, width, i, filter1,1);
+            }
+            for (int iteration = 0; iteration < 3; iteration++)
+            {
+                for (int i = width * 3 + 1; i < (imageSize - width * 3); i++)
                 {
-                    calculateFilterCPP(ptr, currentRow, width, height, k, filter);
-
-                });
-                threads[currentRow].Start();
+                    calculateFilterCPP(outData, outData, width, i, filter1, 1);
+                }
             }
 
-            foreach (Thread t in threads)
-            {
-                t.Join(); // Oczekiwanie na zakończenie wątków
-            }
             sw.Stop();
+
+            // Kopiujemy dane z powrotem do bitmapy
+            Marshal.Copy(outData, 0, ptr, outData.Length);
+
+            // Odblokowujemy dane bitmapy
             bmap.UnlockBits(bmpData);
+
             MessageBox.Show($"Czas wykonania: {sw.ElapsedMilliseconds} ms");
             return bmap;
         }
@@ -172,13 +179,16 @@ namespace GaussianFilter
                     bitmap = new Bitmap(openFileDialog.FileName);
                     if (rightImageFormat(bitmap))
                     {
-                        filter = GenerateGaussianKernel(100);
+                        //filter = GenerateGaussianKernel(100);
                         pictureBox1.Image = bitmap;
-                        bitmap = ProcessBitmap(bitmap);
-                        pictureBox2.Image = bitmap;
+
+                        // Przetwarzanie obrazu
+                        Bitmap processedBitmap = ProcessBitmap(bitmap);
+                        pictureBox2.Image = processedBitmap;
                     }
                 }
             }
         }
+
     }
 }

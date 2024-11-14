@@ -1,4 +1,3 @@
-
 OPTION CASEMAP:NONE
 
 onePixel macro
@@ -13,9 +12,12 @@ onePixel macro
 ;Przemnó¿ piksel przez filtr
  vpmullw ymm1, ymm1, ymm3
  vpmullw ymm2, ymm2, ymm3
+;Dzielenie przez 16 (przesuniêcie w prawo o 4 bity)
+vpsraw ymm4, ymm4, 4  ; Dzielenie ymm4 przez 16 (2^4)
+vpsraw ymm5, ymm5, 4  ; Dzielenie ymm5 przez 16 (2^4)
 ;Zapisz sumy do ymm4 i ymm5
- vpaddw ymm4,ymm4,ymm1
- vpaddw ymm5,ymm5,ymm2
+vpaddw ymm4,ymm4,ymm1
+vpaddw ymm5,ymm5,ymm2
 ;PrzejdŸ do kolejnego piksela i kolejnej wartoœci filtru
  add rbx, 2
  add rdi, 3

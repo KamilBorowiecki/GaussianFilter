@@ -6,57 +6,26 @@
 #define MyFunctions _declspec(dllexport)
 
 extern "C" {
-    MyFunctions void calculateFilterCPP(BYTE* ptr, int row, int width, int height, int k, double* filter) {
-        int stride = ((width * 3 + 3) / 4) * 4;
-        std::vector<BYTE> result(width * 3);
+	MyFunctions void calculateFilterCPP(BYTE outData[], BYTE data[], int imWidth, int index, int filter[], int k)
+	{
+		//Inicjalizacja wyniku
+		double result = 0;
+		int filterSize = 2 * k + 1;
+		//Przejdü kolejno przez kaødπ
+		for (int i = -k; i <= k; i++)
+		{
+			for (int j = -k; j <= k; j++)
+			{
+				result += data[index + ((i * imWidth + j) * 3)] * filter[(i + k) * filterSize + j + k];
+			}
+		}
 
-        int kernelSize = 2 * k + 1;
+		if (result <= 0)
+			result = 0;
+		if (result > 255)
+			result = 255;
+		result = result / 16;
 
-        // Przetwarzanie pikseli
-        for (int x = k; x < width - k; x++) {
-            double blueSum = 0, greenSum = 0, redSum = 0;
-
-            for (int ky = -k; ky <= k; ky++) {
-                for (int kx = -k; kx <= k; kx++) {
-                    int neighborX = x + kx;
-                    int neighborY = row + ky;
-
-                    if (neighborY >= 0 && neighborY < height) {
-                        BYTE* neighborPixel = ptr + (neighborY * stride) + (neighborX * 3);
-
-                        int neighborBlue = neighborPixel[0];
-                        int neighborGreen = neighborPixel[1];
-                        int neighborRed = neighborPixel[2];
-
-                        // Odczyt wartoúci z p≥askiej tablicy
-                        double kernelValue = filter[(ky + k) * kernelSize + (kx + k)];
-                        blueSum += neighborBlue * kernelValue;
-                        greenSum += neighborGreen * kernelValue;
-                        redSum += neighborRed * kernelValue;
-                    }
-                }
-            }
-
-            // RÍczne ograniczenie wartoúci
-            int resultIndex = x * 3;
-            int blue = int(blueSum);
-            int green = int(greenSum);
-            int red = int(redSum);
-
-            if (blue <= 0) blue = 0;
-            if (blue > 255) blue = 255;
-            if (green <= 0) green = 0;
-            if (green > 255) green = 255;
-            if (red <= 0) red = 0;
-            if (red > 255) red = 255;
-
-            result[resultIndex] = BYTE(blue);
-            result[resultIndex + 1] = BYTE(green);
-            result[resultIndex + 2] = BYTE(red);
-        }
-        BYTE* rowPtr = ptr + (row * stride);
-        for (int i = 0; i < width * 3; i++) {
-            rowPtr[i] = result[i];
-        }
-    }
+		outData[index] = (BYTE)result;
+	}
 }
