@@ -6,23 +6,21 @@
 #define MyFunctions _declspec(dllexport)
 
 extern "C" {
-	MyFunctions void calculateFilterCPP(BYTE outData[], BYTE data[], int imWidth, int index,short int filter[], int k)
+	MyFunctions void calculateFilterCPP(BYTE outData[], BYTE data[], int imWidth, int index, short int filter[])
 	{
 		// Inicjalizacja wyniku
 		short int result = 0;
-		short int filterSize = 2 * k + 1;
 
 		// Przejdü przez kaødy element filtra
-		for (int i = -k; i <= k; i++)
+		for (int i = -1; i < 2; i++)
 		{
-			for (int j = -k; j <= k; j++)
+			for (int j = -1; j < 2; j++)
 			{
-				result += data[index + ((i * imWidth + j) * 3)] * filter[(i + k) * 3 + j + k];	
+				result += data[index + ((i * imWidth + j) * 3)] * filter[(i + 1) * 3 + j + 1];	
 			}
 		}
 		result = result / 16;
-		
-		
+			
 		// Ograniczenie wyniku do zakresu 0-255
 		if (result <= 0)
 			result = 0;

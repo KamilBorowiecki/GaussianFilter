@@ -19,6 +19,9 @@ namespace GaussianFilter
         private PictureBox pictureBox3;
         private Button button1;
         private static TextBox textBox1;
+        private static Label leftImageTime;
+        private static Label rightImageTime;
+        private static Label compareResult;
         private static double[] filter;
         private static int k;
 
@@ -26,7 +29,7 @@ namespace GaussianFilter
         public static extern unsafe void MyProc2(byte[] outData, byte[] data, int imWidth, int i, Int16[] filter);
 
         [DllImport(@"C:\Users\Kamil\Desktop\Projekt_JA_filtrGaussa\GaussianFilter\x64\Debug\Cdll.dll", EntryPoint = "calculateFilterCPP", CallingConvention = CallingConvention.StdCall)]
-        public static extern void calculateFilterCPP(byte[] outData, byte[] data, int imWidth, int i, Int16[] filter, int k);
+        public static extern void calculateFilterCPP(byte[] outData, byte[] data, int imWidth, int i, Int16[] filter);
 
         public MainForm()
         {
@@ -35,6 +38,36 @@ namespace GaussianFilter
             {
                 Dock = DockStyle.Bottom
             };
+
+            leftImageTime = new Label()
+            {
+                Text = "0",
+                Width = 450,
+                Height = 450,
+                Location = new Point(510, 440),
+                AutoSize = true,
+            };
+
+            rightImageTime = new Label()
+            {
+                Text = "0",
+                Width = 450,
+                Height = 150,
+                Location = new Point(1010, 440),
+                AutoSize = true,
+
+            };
+
+            compareResult = new Label()
+            {
+                Text = "0",
+                Width = 450,
+                Height = 550,
+                Location = new Point(410, 710),
+                AutoSize = true,
+            };
+
+
             pictureBox1 = new PictureBox
             {
                 Width = 450,
@@ -66,6 +99,9 @@ namespace GaussianFilter
             };
             button1.Click += button1_Click;
 
+            Controls.Add(leftImageTime);
+            Controls.Add(rightImageTime);
+            Controls.Add(compareResult);
             Controls.Add(textBox1);
             Controls.Add(pictureBox2);
             Controls.Add(pictureBox3);
@@ -115,7 +151,6 @@ namespace GaussianFilter
             int width = bmp.Width;
             int height = bmp.Height;
 
-            int bytesPerPixel = 3; // 24-bitowy BMP
             int stride = bmpData.Stride; // Uwzględniamy rzeczywisty stride bitmapy
             uint imageSize = (uint)(stride * height);
 
@@ -126,20 +161,20 @@ namespace GaussianFilter
             Marshal.Copy(ptr, data, 0, data.Length);
 
             // Przetwarzanie obrazu przy użyciu filtra w C++
-            Int16[] filter1 = {1,2,1,2,4,2,1,2,1};
+            Int16[] filter1 = { 1, 2, 1, 2, 4, 2, 1, 2, 1 };
             Stopwatch sw = new Stopwatch();
             sw.Start();
             for (int i = width * 3 + 1; i < (imageSize - width * 3); i++)
             {
-                calculateFilterCPP(outData, data, width, i, filter1, 1);
+                calculateFilterCPP(outData, data, width, i, filter1);
             }
-            //for (int iteration = 0; iteration < 3; iteration++)
-            //{
-            //    for (int i = width * 3 + 1; i < (imageSize - width * 3); i++)
-            //    {
-            //        calculateFilterCPP(outData, outData, width, i, filter1, 1);
-            //    }
-            //}
+            for (int iteration = 0; iteration < 3; iteration++)
+            {
+                for (int i = width * 3 + 1; i < (imageSize - width * 3); i++)
+                {
+                    calculateFilterCPP(outData, outData, width, i, filter1);
+                }
+            }
 
             sw.Stop();
 
@@ -149,7 +184,7 @@ namespace GaussianFilter
             // Odblokowujemy dane bitmapy
             bmap.UnlockBits(bmpData);
 
-            //MessageBox.Show($"Czas wykonania: {sw.ElapsedMilliseconds} ms");
+            leftImageTime.Text = $" {sw.ElapsedMilliseconds} ms";
             return bmap;
         }
 
@@ -165,7 +200,6 @@ namespace GaussianFilter
             int width = bmp.Width;
             int height = bmp.Height;
 
-            int bytesPerPixel = 3; // 24-bitowy BMP
             int stride = bmpData.Stride; // Uwzględniamy rzeczywisty stride bitmapy
             uint imageSize = (uint)(stride * height);
 
@@ -183,15 +217,16 @@ namespace GaussianFilter
             {
                 MyProc2(outData, data, width, i, filter1);
             }
-            //for (int iteration = 0; iteration < 3; iteration++)
-            //{
-            //    for (int i = width * 3 + 1; i < (imageSize - width * 3); i++)
-            //    {
-            //        MyProc2(outData, outData, width, i, filter1);
-            //    }
-            //}
+            for (int iteration = 0; iteration < 3; iteration++)
+            {
+                for (int i = width * 3 + 1; i < (imageSize - width * 3); i++)
+                {
+                    MyProc2(outData, outData, width, i, filter1);
+                }
+            }
 
             sw.Stop();
+
 
             // Kopiujemy dane z powrotem do bitmapy
             Marshal.Copy(outData, 0, ptr, outData.Length);
@@ -199,37 +234,25 @@ namespace GaussianFilter
             // Odblokowujemy dane bitmapy
             bmap.UnlockBits(bmpData);
 
-            //MessageBox.Show($"Czas wykonania: {sw.ElapsedMilliseconds} ms");
+            rightImageTime.Text = $" {sw.ElapsedMilliseconds} ms";
             return bmap;
         }
 
-        void CompareBitmapsWithTolerance(Bitmap bmp1, Bitmap bmp2, int tolerance)
+        void CompareBitmaps(Bitmap bmp1, Bitmap bmp2)
         {
-            if (bmp1.Width != bmp2.Width || bmp1.Height != bmp2.Height)
-                MessageBox.Show("Obrazy sa rozne");
-
             for (int y = 0; y < bmp1.Height; y++)
             {
                 for (int x = 0; x < bmp1.Width; x++)
                 {
-                    Color c1 = bmp1.GetPixel(x, y);
-                    Color c2 = bmp2.GetPixel(x, y);
-
-                    // Oblicz różnice w kanałach R, G, B
-                    int diffR = Math.Abs(c1.R - c2.R);
-                    int diffG = Math.Abs(c1.G - c2.G);
-                    int diffB = Math.Abs(c1.B - c2.B);
-
-                    // Jeśli różnice przekraczają tolerancję, obrazy są różne
-                    if (diffR > tolerance || diffG > tolerance || diffB > tolerance)
-                        MessageBox.Show("Obrazy sa rozne");
+                    if (bmp1.GetPixel(x, y) != bmp2.GetPixel(x, y))
+                    {
+                        compareResult.Text = "Obrazy sa rozne";
+                        //Console.WriteLine($"X:{x} Y:{y}: zły -  1:{bmp1.GetPixel(x, y)} 2:{bmp2.GetPixel(x, y)} ");
+                    }
                 }
             }
-            MessageBox.Show("Obrazy sa identyczne");
+            compareResult.Text = "Obrazy sa identyczne";
         }
-        
-        
-
 
         [STAThread]
         public static void Main()
@@ -273,9 +296,7 @@ namespace GaussianFilter
                         Bitmap processedBitmap2 = ProcessBitmap2(bitmap);
                         pictureBox3.Image = processedBitmap2;
 
-                        CompareBitmapsWithTolerance(processedBitmap, processedBitmap2,1);
-
-
+                        CompareBitmaps(processedBitmap, processedBitmap2);
                     }
                 }
             }
