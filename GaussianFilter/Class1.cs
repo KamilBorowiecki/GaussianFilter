@@ -16,6 +16,7 @@ namespace GaussianFilter
         private Bitmap bitmap;
         private PictureBox pictureBox1;
         private PictureBox pictureBox2;
+        private PictureBox pictureBox3;
         private Button button1;
         private static TextBox textBox1;
         private static double[] filter;
@@ -36,18 +37,26 @@ namespace GaussianFilter
             };
             pictureBox1 = new PictureBox
             {
-                Width = 600,
-                Height = 600,
+                Width = 450,
+                Height = 450,
                 SizeMode = PictureBoxSizeMode.Zoom,
                 Location = new Point(10, 40)
             };
 
+            pictureBox3 = new PictureBox
+            {
+                Width = 450,
+                Height = 450,
+                SizeMode = PictureBoxSizeMode.Zoom,
+                Location = new Point(1010, 40)
+            };
+
             pictureBox2 = new PictureBox
             {
-                Width = 600,               // Ustaw szerokość na 200 pikseli
-                Height = 600,              // Ustaw wysokość na 200 pikseli
+                Width = 450,               // Ustaw szerokość na 200 pikseli
+                Height = 450,              // Ustaw wysokość na 200 pikseli
                 SizeMode = PictureBoxSizeMode.Zoom, // Skaluje obraz proporcjonalnie do rozmiaru ramki
-                Location = new Point(710, 40)
+                Location = new Point(510, 40)
             };
 
             button1 = new Button
@@ -59,6 +68,7 @@ namespace GaussianFilter
 
             Controls.Add(textBox1);
             Controls.Add(pictureBox2);
+            Controls.Add(pictureBox3);
             Controls.Add(pictureBox1);
             Controls.Add(button1);
         }
@@ -124,13 +134,66 @@ namespace GaussianFilter
             sw.Start();
             for (int i = width * 3 + 1; i < (imageSize - width * 3); i++)
             {
-                calculateFilterCPP(outData, data, width, i, filter1,1);
+                calculateFilterCPP(outData, data, width, i, filter1, 1);
             }
             for (int iteration = 0; iteration < 3; iteration++)
             {
                 for (int i = width * 3 + 1; i < (imageSize - width * 3); i++)
                 {
                     calculateFilterCPP(outData, outData, width, i, filter1, 1);
+                }
+            }
+
+            sw.Stop();
+
+            // Kopiujemy dane z powrotem do bitmapy
+            Marshal.Copy(outData, 0, ptr, outData.Length);
+
+            // Odblokowujemy dane bitmapy
+            bmap.UnlockBits(bmpData);
+
+            MessageBox.Show($"Czas wykonania: {sw.ElapsedMilliseconds} ms");
+            return bmap;
+        }
+
+        private static unsafe Bitmap ProcessBitmap2(Bitmap bmp)
+        {
+            Bitmap bmap = (Bitmap)bmp.Clone();
+            BitmapData bmpData = bmap.LockBits(new Rectangle(0, 0, bmp.Width, bmp.Height),
+                                               ImageLockMode.ReadWrite, bmap.PixelFormat);
+
+            IntPtr ptr = bmpData.Scan0;
+
+            // Przechowujemy szerokość i wysokość w zmiennych lokalnych
+            int width = bmp.Width;
+            int height = bmp.Height;
+
+            int bytesPerPixel = 3; // 24-bitowy BMP
+            int stride = bmpData.Stride; // Uwzględniamy rzeczywisty stride bitmapy
+            uint imageSize = (uint)(stride * height);
+
+            byte[] data = new byte[imageSize];
+            byte[] outData = new byte[imageSize];
+
+            // Kopiujemy dane z bitmapy do tablicy bajtów
+            Marshal.Copy(ptr, data, 0, data.Length);
+
+            // Przetwarzanie obrazu przy użyciu filtra w C++
+            Int16[] filter1 = { 1, 2, 1, 2, 4, 2, 1, 2, 1 };
+            double[] filter2 = { 1.0 / 16, 2.0 / 16, 1.0 / 16, 2.0 / 16, 4.0 / 16, 2.0 / 16, 1.0 / 16, 2.0 / 16, 1.0 / 16 };
+            //filter;
+            int k1 = k;
+            Stopwatch sw = new Stopwatch();
+            sw.Start();
+            for (int i = width * 3 + 1; i < (imageSize - width * 3); i++)
+            {
+                MyProc2(outData, data, width, i, filter1);
+            }
+            for (int iteration = 0; iteration < 3; iteration++)
+            {
+                for (int i = width * 3 + 1; i < (imageSize - width * 3); i++)
+                {
+                    MyProc2(outData, outData, width, i, filter1);
                 }
             }
 
@@ -185,6 +248,10 @@ namespace GaussianFilter
                         // Przetwarzanie obrazu
                         Bitmap processedBitmap = ProcessBitmap(bitmap);
                         pictureBox2.Image = processedBitmap;
+
+                        Bitmap processedBitmap2 = ProcessBitmap2(bitmap);
+                        pictureBox3.Image = processedBitmap2;
+                
                     }
                 }
             }
