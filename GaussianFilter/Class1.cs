@@ -127,22 +127,19 @@ namespace GaussianFilter
 
             // Przetwarzanie obrazu przy użyciu filtra w C++
             Int16[] filter1 = {1,2,1,2,4,2,1,2,1};
-            double[] filter2 = { 1.0 / 16, 2.0 / 16, 1.0 / 16, 2.0 / 16, 4.0 / 16, 2.0 / 16, 1.0 / 16, 2.0 / 16, 1.0 / 16 };
-            //filter;
-            int k1 = k;
             Stopwatch sw = new Stopwatch();
             sw.Start();
             for (int i = width * 3 + 1; i < (imageSize - width * 3); i++)
             {
                 calculateFilterCPP(outData, data, width, i, filter1, 1);
             }
-            for (int iteration = 0; iteration < 3; iteration++)
-            {
-                for (int i = width * 3 + 1; i < (imageSize - width * 3); i++)
-                {
-                    calculateFilterCPP(outData, outData, width, i, filter1, 1);
-                }
-            }
+            //for (int iteration = 0; iteration < 3; iteration++)
+            //{
+            //    for (int i = width * 3 + 1; i < (imageSize - width * 3); i++)
+            //    {
+            //        calculateFilterCPP(outData, outData, width, i, filter1, 1);
+            //    }
+            //}
 
             sw.Stop();
 
@@ -152,7 +149,7 @@ namespace GaussianFilter
             // Odblokowujemy dane bitmapy
             bmap.UnlockBits(bmpData);
 
-            MessageBox.Show($"Czas wykonania: {sw.ElapsedMilliseconds} ms");
+            //MessageBox.Show($"Czas wykonania: {sw.ElapsedMilliseconds} ms");
             return bmap;
         }
 
@@ -180,22 +177,19 @@ namespace GaussianFilter
 
             // Przetwarzanie obrazu przy użyciu filtra w C++
             Int16[] filter1 = { 1, 2, 1, 2, 4, 2, 1, 2, 1 };
-            double[] filter2 = { 1.0 / 16, 2.0 / 16, 1.0 / 16, 2.0 / 16, 4.0 / 16, 2.0 / 16, 1.0 / 16, 2.0 / 16, 1.0 / 16 };
-            //filter;
-            int k1 = k;
             Stopwatch sw = new Stopwatch();
             sw.Start();
             for (int i = width * 3 + 1; i < (imageSize - width * 3); i++)
             {
                 MyProc2(outData, data, width, i, filter1);
             }
-            for (int iteration = 0; iteration < 3; iteration++)
-            {
-                for (int i = width * 3 + 1; i < (imageSize - width * 3); i++)
-                {
-                    MyProc2(outData, outData, width, i, filter1);
-                }
-            }
+            //for (int iteration = 0; iteration < 3; iteration++)
+            //{
+            //    for (int i = width * 3 + 1; i < (imageSize - width * 3); i++)
+            //    {
+            //        MyProc2(outData, outData, width, i, filter1);
+            //    }
+            //}
 
             sw.Stop();
 
@@ -205,9 +199,36 @@ namespace GaussianFilter
             // Odblokowujemy dane bitmapy
             bmap.UnlockBits(bmpData);
 
-            MessageBox.Show($"Czas wykonania: {sw.ElapsedMilliseconds} ms");
+            //MessageBox.Show($"Czas wykonania: {sw.ElapsedMilliseconds} ms");
             return bmap;
         }
+
+        void CompareBitmapsWithTolerance(Bitmap bmp1, Bitmap bmp2, int tolerance)
+        {
+            if (bmp1.Width != bmp2.Width || bmp1.Height != bmp2.Height)
+                MessageBox.Show("Obrazy sa rozne");
+
+            for (int y = 0; y < bmp1.Height; y++)
+            {
+                for (int x = 0; x < bmp1.Width; x++)
+                {
+                    Color c1 = bmp1.GetPixel(x, y);
+                    Color c2 = bmp2.GetPixel(x, y);
+
+                    // Oblicz różnice w kanałach R, G, B
+                    int diffR = Math.Abs(c1.R - c2.R);
+                    int diffG = Math.Abs(c1.G - c2.G);
+                    int diffB = Math.Abs(c1.B - c2.B);
+
+                    // Jeśli różnice przekraczają tolerancję, obrazy są różne
+                    if (diffR > tolerance || diffG > tolerance || diffB > tolerance)
+                        MessageBox.Show("Obrazy sa rozne");
+                }
+            }
+            MessageBox.Show("Obrazy sa identyczne");
+        }
+        
+        
 
 
         [STAThread]
@@ -251,7 +272,10 @@ namespace GaussianFilter
 
                         Bitmap processedBitmap2 = ProcessBitmap2(bitmap);
                         pictureBox3.Image = processedBitmap2;
-                
+
+                        CompareBitmapsWithTolerance(processedBitmap, processedBitmap2,1);
+
+
                     }
                 }
             }

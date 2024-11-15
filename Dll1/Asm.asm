@@ -61,11 +61,11 @@ MyProc2 proc EXPORT
  onePixel
 
  vpsraw ymm5, ymm5, 4  ; Dzielenie ymm4 przez 16 (2^4)
-vpsraw ymm4, ymm4, 4  ; Dzielenie ymm5 przez 16 (2^4)
+ vpsraw ymm4, ymm4, 4  ; Dzielenie ymm5 przez 16 (2^4)
 ;Po³¹cz obliczone w ymm5 i ymm4 wartoœci sum dla kolejnych piksli
  vpackuswb ymm0, ymm5, ymm4
 ;Zapisz piksel do tablicy wyjœciowej
- vmovdqu ymmword ptr[RSI+3], ymm0
+ vmovdqu ymmword ptr[RSI], ymm0
  
  ret ; return z in EAX register
 MyProc2 endp
