@@ -22,8 +22,6 @@ namespace GaussianFilter
         private static Label leftImageTime;
         private static Label rightImageTime;
         private static Label compareResult;
-        private static double[] filter;
-        private static int k;
 
         [DllImport(@"C:\Users\Kamil\Desktop\Projekt_JA_filtrGaussa\GaussianFilter\x64\Debug\Asm.dll", EntryPoint = "MyProc2", CallingConvention = CallingConvention.Cdecl)]
         public static extern unsafe void MyProc2(byte[] outData, byte[] data, int imWidth, int i, Int16[] filter);
@@ -108,36 +106,6 @@ namespace GaussianFilter
             Controls.Add(pictureBox1);
             Controls.Add(button1);
         }
-        public static double[] GenerateGaussianKernel(double sigma)
-        {
-            int size = int.Parse(textBox1.Text);
-            k = (size - 1) / 2; // Rozmiar półmaski
-            double[] gaussianFilter = new double[size * size];
-            int center = size / 2;
-            double sum = 0.0;
-
-            // Oblicz wartości dla maski
-            for (int i = 0; i < size; i++)
-            {
-                for (int j = 0; j < size; j++)
-                {
-                    int x = i - center;
-                    int y = j - center;
-                    int index = i * size + j; // Konwersja indeksów 2D na 1D
-                    gaussianFilter[index] = Math.Exp(-(x * x + y * y) / (2 * sigma * sigma));
-                    sum += gaussianFilter[index];
-                }
-            }
-
-            // Normalizacja
-            for (int i = 0; i < gaussianFilter.Length; i++)
-            {
-                gaussianFilter[i] /= sum;
-            }
-
-            return gaussianFilter;
-        }
-
 
         private static unsafe Bitmap ProcessBitmap(Bitmap bmp)
         {
@@ -286,7 +254,6 @@ namespace GaussianFilter
                     bitmap = new Bitmap(openFileDialog.FileName);
                     if (rightImageFormat(bitmap))
                     {
-                        //filter = GenerateGaussianKernel(100);
                         pictureBox1.Image = bitmap;
 
                         // Przetwarzanie obrazu
