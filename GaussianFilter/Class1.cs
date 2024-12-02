@@ -126,7 +126,7 @@ namespace GaussianFilter
             Int16[] filter1 = { 1, 2, 1, 2, 4, 2, 1, 2, 1 };
             long pictureSize = imageSize - width * 3;
             Stopwatch sw = new Stopwatch();
-            int threadCount = Environment.ProcessorCount; // Use at most 64 threads
+            int threadCount = Environment.ProcessorCount; 
             Thread[] threads = new Thread[threadCount];
 
             // Calculate the chunk size for each thread
@@ -162,7 +162,7 @@ namespace GaussianFilter
             // Odblokowujemy dane bitmapy
             bmap.UnlockBits(bmpData);
 
-            leftImageTime.Text = $"Czas wykonania: {sw.ElapsedMilliseconds} ms";
+            leftImageTime.Text = $"Czas wykonania c++: {sw.ElapsedMilliseconds} ms";
             return bmap;
         }
 
@@ -194,7 +194,6 @@ namespace GaussianFilter
             int threadCount = Environment.ProcessorCount;
             Thread[] threads = new Thread[threadCount];
 
-            // Calculate the chunk size for each thread
             int chunkSize = (int)(pictureSize / threadCount);
             sw.Start();
 
@@ -214,19 +213,16 @@ namespace GaussianFilter
                 threads[t].Start();
             }
 
-            // Wait for all threads to complete
             foreach (var thread in threads)
             {
                 thread.Join();
             }
             sw.Stop();
-            // Kopiujemy dane z powrotem do bitmapy
             Marshal.Copy(outData, 0, ptr, outData.Length);
 
-            // Odblokowujemy dane bitmapy
             bmap.UnlockBits(bmpData);
 
-            rightImageTime.Text = $"Czas wykonania: {sw.ElapsedMilliseconds} ms";
+            rightImageTime.Text = $"Czas wykonania asemblera: {sw.ElapsedMilliseconds} ms";
             return bmap;
         }
 
@@ -237,13 +233,18 @@ namespace GaussianFilter
             {
                 for (int x = 0; x < bmp1.Width; x++)
                 {
-                    if (bmp1.GetPixel(x, y) != bmp2.GetPixel(x, y))
+                    if(y == bmp2.Height-1)
                     {
-                        compareResult.Text = "Obrazy sa rozne";
                         Console.WriteLine($"X:{x} Y:{y}: zły -  1:{bmp1.GetPixel(x, y)} 2:{bmp2.GetPixel(x, y)} ");
                     }
+                    //if (bmp1.GetPixel(x, y) != bmp2.GetPixel(x, y))
+                    //{
+                    //    compareResult.Text = "Obrazy sa rozne";
+                    //    Console.WriteLine($"X:{x} Y:{y}: zły -  1:{bmp1.GetPixel(x, y)} 2:{bmp2.GetPixel(x, y)} ");
+                    //}
                 }
             }
+
         }
 
         [STAThread]
