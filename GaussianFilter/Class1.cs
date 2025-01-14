@@ -21,11 +21,13 @@ namespace GaussianFilter
         private static Label leftImageTime;
         private static Label rightImageTime;
         private static Label compareResult;
+        private static Label numberInputLabel;
+        private static TextBox numberInput;
 
-        [DllImport(@"C:\Users\Kamil\Desktop\Projekt_JA_filtrGaussa\GaussianFilter\x64\Debug\Asm.dll", EntryPoint = "MyProc2", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("Asm.dll", EntryPoint = "MyProc2", CallingConvention = CallingConvention.Cdecl)]
         public static extern unsafe void MyProc2(byte[] outData, byte[] data, int imWidth, int i, Int16[] filter);
 
-        [DllImport(@"C:\Users\Kamil\Desktop\Projekt_JA_filtrGaussa\GaussianFilter\x64\Debug\Cdll.dll", EntryPoint = "calculateFilterCPP", CallingConvention = CallingConvention.StdCall)]
+        [DllImport("Cdll.dll", EntryPoint = "calculateFilterCPP", CallingConvention = CallingConvention.StdCall)]
         public static extern void calculateFilterCPP(byte[] outData, byte[] data, int imWidth, int i, Int16[] filter);
 
         public MainForm()
@@ -76,9 +78,9 @@ namespace GaussianFilter
 
             pictureBox2 = new PictureBox
             {
-                Width = 450,               // Ustaw szerokość na 200 pikseli
-                Height = 450,              // Ustaw wysokość na 200 pikseli
-                SizeMode = PictureBoxSizeMode.Zoom, // Skaluje obraz proporcjonalnie do rozmiaru ramki
+                Width = 450,             
+                Height = 450,             
+                SizeMode = PictureBoxSizeMode.Zoom, 
                 Location = new Point(510, 40)
             };
 
@@ -88,6 +90,19 @@ namespace GaussianFilter
                 Width = 450,               
                 Height = 30,
                 Location = new Point(510, 0)
+            };
+
+            numberInputLabel = new Label
+            {
+                Text = "Wpisz liczbę wątków:",
+                Location = new Point(10, 510),
+                AutoSize = true
+            };
+
+            numberInput = new TextBox
+            {
+                Width = 200,
+                Location = new Point(150, 510)
             };
             button1.Click += button1_Click;
 
@@ -99,6 +114,8 @@ namespace GaussianFilter
             Controls.Add(pictureBox3);
             Controls.Add(pictureBox1);
             Controls.Add(button1);
+            Controls.Add(numberInputLabel);
+            Controls.Add(numberInput);
         }
 
         private static unsafe Bitmap ProcessBitmap(Bitmap bmp)
@@ -125,8 +142,12 @@ namespace GaussianFilter
             // Przetwarzanie obrazu przy użyciu filtra w C++
             Int16[] filter1 = { 1, 2, 1, 2, 4, 2, 1, 2, 1 };
             long pictureSize = imageSize - width * 3;
+            int threadCount = Environment.ProcessorCount;
+            if (int.TryParse(numberInput.Text, out int number))
+            {
+                threadCount = number;
+            }
             Stopwatch sw = new Stopwatch();
-            int threadCount = Environment.ProcessorCount; 
             Thread[] threads = new Thread[threadCount];
 
             // Calculate the chunk size for each thread
@@ -190,8 +211,12 @@ namespace GaussianFilter
             // Przetwarzanie obrazu przy użyciu filtra w C++
             Int16[] filter1 = { 1, 2, 1, 2, 4, 2, 1, 2, 1 };
             long pictureSize = imageSize - width * 3;
-            Stopwatch sw = new Stopwatch();
             int threadCount = Environment.ProcessorCount;
+            if(int.TryParse(numberInput.Text, out int number))
+            {
+                threadCount = number;
+            }
+            Stopwatch sw = new Stopwatch();
             Thread[] threads = new Thread[threadCount];
 
             int chunkSize = (int)(pictureSize / threadCount);
@@ -229,19 +254,19 @@ namespace GaussianFilter
         void CompareBitmaps(Bitmap bmp1, Bitmap bmp2)
         {
             compareResult.Text = "Obrazy sa identyczne";
-            for (int y = 0; y < bmp1.Height; y++)
+            for (int y = 0; y < bmp1.Height-1; y++)
             {
                 for (int x = 0; x < bmp1.Width; x++)
                 {
-                    if(y == bmp2.Height-1)
-                    {
-                        Console.WriteLine($"X:{x} Y:{y}: zły -  1:{bmp1.GetPixel(x, y)} 2:{bmp2.GetPixel(x, y)} ");
-                    }
-                    //if (bmp1.GetPixel(x, y) != bmp2.GetPixel(x, y))
+                    //if(y == bmp2.Height-1)
                     //{
-                    //    compareResult.Text = "Obrazy sa rozne";
                     //    Console.WriteLine($"X:{x} Y:{y}: zły -  1:{bmp1.GetPixel(x, y)} 2:{bmp2.GetPixel(x, y)} ");
                     //}
+                    if (bmp1.GetPixel(x, y) != bmp2.GetPixel(x, y))
+                    {
+                        compareResult.Text = "Obrazy sa rozne";
+                        Console.WriteLine($"X:{x} Y:{y}: zły -  1:{bmp1.GetPixel(x, y)} 2:{bmp2.GetPixel(x, y)} ");
+                    }
                 }
             }
 
