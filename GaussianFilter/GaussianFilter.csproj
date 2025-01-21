@@ -55,6 +55,7 @@
     <ErrorReport>prompt</ErrorReport>
     <Prefer32Bit>true</Prefer32Bit>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <WarningLevel>0</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
@@ -92,13 +93,17 @@
       <DependentUpon>myNewForm.cs</DependentUpon>
     </EmbeddedResource>
   </ItemGroup>
-  <ItemGroup>
-    <Content Include="Asm.dll">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Cdll.dll">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <PropertyGroup>
+    <PostBuildEvent>if "$(Configuration)" == "Debug" (
+    copy "$(SolutionDir)x64\Debug\Cdll.dll" "$(TargetDir)"
+    copy "$(SolutionDir)x64\Debug\Asm.dll" "$(TargetDir)"
+)
+
+if "$(Configuration)" == "Release" (
+    copy "$(SolutionDir)x64\Release\Cdll.dll" "$(TargetDir)"
+    copy "$(SolutionDir)x64\Release\Asm.dll" "$(TargetDir)"
+)
+</PostBuildEvent>
+  </PropertyGroup>
 </Project>
